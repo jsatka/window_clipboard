@@ -5,24 +5,24 @@ use winit::{
     window::WindowBuilder,
 };
 
-fn main() {
-    let event_loop = EventLoop::new();
+fn main() -> Result<(), impl std::error::Error> {
+    let event_loop = EventLoop::new()?;
 
     let window = WindowBuilder::new()
         .with_title("A fantastic window!")
-        .build(&event_loop)
-        .unwrap();
+        .build(&event_loop)?;
 
     let clipboard = Clipboard::connect(&window).expect("Connect to clipboard");
 
-    event_loop.run(move |event, _, control_flow| match event {
-        Event::MainEventsCleared => {
+    event_loop.run(move |event, target| match event {
+        Event::AboutToWait => {
             println!("{:?}", clipboard.read());
+            target.set_control_flow(ControlFlow::Wait)
         }
         Event::WindowEvent {
             event: WindowEvent::CloseRequested,
             window_id,
-        } if window_id == window.id() => *control_flow = ControlFlow::Exit,
-        _ => *control_flow = ControlFlow::Wait,
-    });
+        } if window_id == window.id() => target.exit(),
+        _ => target.set_control_flow(ControlFlow::Wait),
+    })
 }

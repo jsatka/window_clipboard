@@ -1,23 +1,26 @@
 use crate::ClipboardProvider;
 
-use raw_window_handle::{HasRawDisplayHandle, RawDisplayHandle};
+use raw_window_handle::{HasDisplayHandle, RawDisplayHandle};
 use std::error::Error;
 
 pub use clipboard_wayland as wayland;
 pub use clipboard_x11 as x11;
 
-pub fn connect<W: HasRawDisplayHandle>(
+pub fn connect<W: HasDisplayHandle>(
     window: &W,
 ) -> Result<Box<dyn ClipboardProvider>, Box<dyn Error>> {
-    let clipboard = match window.raw_display_handle() {
-        RawDisplayHandle::Wayland(handle) => {
-            assert!(!handle.display.is_null());
+    let Ok(display_handle) = window.display_handle() else {
+        Err("Window does not have a display handle")?
+    };
 
-            Box::new(unsafe {
-                wayland::Clipboard::connect(handle.display as *mut _)
-            }) as _
+    let clipboard = match display_handle.as_raw() {
+        RawDisplayHandle::Wayland(handle) => Box::new(unsafe {
+            wayland::Clipboard::connect(handle.display.as_ptr() as *mut _)
+        }) as _,
+        RawDisplayHandle::Xlib(_) | RawDisplayHandle::Xcb(_) => {
+            Box::new(x11::Clipboard::connect()?) as _
         }
-        _ => Box::new(x11::Clipboard::connect()?) as _,
+        _ => return Err("Unsupported display type")?,
     };
 
     Ok(clipboard)

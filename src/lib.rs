@@ -46,7 +46,7 @@ mod platform;
 #[path = "platform/dummy.rs"]
 mod platform;
 
-use raw_window_handle::HasRawDisplayHandle;
+use raw_window_handle::HasDisplayHandle;
 use std::error::Error;
 
 pub struct Clipboard {
@@ -54,7 +54,7 @@ pub struct Clipboard {
 }
 
 impl Clipboard {
-    pub fn connect<W: HasRawDisplayHandle>(
+    pub fn connect<W: HasDisplayHandle>(
         window: &W,
     ) -> Result<Self, Box<dyn Error>> {
         let raw = platform::connect(window)?;

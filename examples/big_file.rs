@@ -1,12 +1,13 @@
 use rand::distributions::{Alphanumeric, Distribution};
 use window_clipboard::Clipboard;
 use winit::{
-    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event::{ElementState, Event, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
+    keyboard::{KeyCode, PhysicalKey},
     window::WindowBuilder,
 };
 
-fn main() {
+fn main() -> Result<(), impl std::error::Error> {
     let mut rng = rand::thread_rng();
 
     let data: String = Alphanumeric
@@ -15,25 +16,24 @@ fn main() {
         .map(char::from)
         .collect();
 
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoop::new()?;
 
     let window = WindowBuilder::new()
         .with_title("Press G to start the test!")
-        .build(&event_loop)
-        .unwrap();
+        .build(&event_loop)?;
 
     let mut clipboard =
         Clipboard::connect(&window).expect("Connect to clipboard");
 
     clipboard.write(data.clone()).unwrap();
 
-    event_loop.run(move |event, _, control_flow| match event {
+    event_loop.run(move |event, target| match event {
         Event::WindowEvent {
             event:
                 WindowEvent::KeyboardInput {
-                    input:
-                        KeyboardInput {
-                            virtual_keycode: Some(VirtualKeyCode::G),
+                    event:
+                        KeyEvent {
+                            physical_key: PhysicalKey::Code(KeyCode::KeyG),
                             state: ElementState::Released,
                             ..
                         },
@@ -48,7 +48,7 @@ fn main() {
         Event::WindowEvent {
             event: WindowEvent::CloseRequested,
             window_id,
-        } if window_id == window.id() => *control_flow = ControlFlow::Exit,
-        _ => *control_flow = ControlFlow::Wait,
-    });
+        } if window_id == window.id() => target.exit(),
+        _ => target.set_control_flow(ControlFlow::Wait),
+    })
 }
